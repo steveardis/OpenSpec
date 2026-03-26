@@ -256,14 +256,67 @@ Trace always produces a **durable artifact** (the YAML trace map). A trace-repor
 
 ---
 
+## Trace Anchoring: Repo + Commit
+
+### The Line Number Fragility Problem
+
+Line-level tracing in a living codebase is inherently fragile — any change (even adding a log statement) shifts line numbers and invalidates every trace pointing at lines below the edit. This makes traces unmaintainable during active development.
+
+### Solution: Pin Traces to Commits
+
+A trace points at a **repo at a specific commit**, not at a moving file:
+
+```yaml
+# traces/OrderService.yaml
+source:
+  repo: github.com/acme/legacy-app
+  commit: a1b2c3d
+
+mapped:
+  - file: src/OrderService.java
+    lines: [42-58]
+    spec: order-approval-threshold
+    classification: business
+```
+
+Line numbers are **stable** because the commit is pinned. Line 42 at commit `a1b2c3d` is always line 42 at commit `a1b2c3d`.
+
+### Precondition: Clean Working Tree
+
+**Rule: Trace SHALL refuse to execute when uncommitted changes exist.** If the trace pins to a commit, the working tree must match that commit. A dirty tree means the trace would document a state that doesn't exist in version control. Abort with a message to commit or stash.
+
+### How This Changes Trace Usage
+
+```
+Extract from legacy code:
+  trace → repo: legacy-app, commit: abc123
+  "Here's what we found at this point in time"
+
+Archive a change:
+  trace → repo: new-app, commit: def456
+  "Here's proof of coverage at completion"
+
+Drift check later:
+  re-trace → repo: new-app, commit: ghi789 (HEAD)
+  compare against previous trace
+  "What changed since we last looked?"
+```
+
+- **During development:** No tracing. Traces don't try to track work-in-progress.
+- **At archive time:** Trace the merge commit. One snapshot of the final state.
+- **Drift detection:** Diff between two traces at different commits, not a single trace trying to stay current.
+
+This eliminates the concern about unspec'd changes (log statements, formatting, etc.) breaking traces during normal development. The trace captures final state, not intermediate states.
+
+---
+
 ## Open Design Questions (Remaining)
 
 1. **Qualifying lines** — What counts? Import statements, type definitions, test files, config?
 2. **Domain boundary determination** — AI-driven vs. user-guided vs. hybrid?
-3. **Trace stability** — How do mappings survive refactors?
-4. **Classification automation** — How much can AI classify vs. requiring human review?
-5. **Classification location** — Inline in spec.md vs. separate disposition.yaml?
-6. **Extract idempotency** — How does re-running extract interact with existing extracts?
-7. **Promotion workflow** — What does "carry forward an extract into specs/" look like as a process?
-8. **Trace-report format** — Separate utility, subcommand, or flag on trace?
-9. **Archive + trace interaction** — How does archive behave when traces exist? Warning only, or blocking gate?
+3. **Classification automation** — How much can AI classify vs. requiring human review?
+4. **Classification location** — Inline in spec.md vs. separate disposition.yaml?
+5. **Extract idempotency** — How does re-running extract interact with existing extracts?
+6. **Promotion workflow** — What does "carry forward an extract into specs/" look like as a process?
+7. **Trace-report format** — Separate utility, subcommand, or flag on trace?
+8. **Archive + trace interaction** — How does archive behave when traces exist? Warning only, or blocking gate?
