@@ -143,6 +143,10 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude/
+!.claude/commands/
+!.claude/commands/**
+!.claude/skills/
+!.claude/skills/**
 CLAUDE.md
 .DS_Store
 
