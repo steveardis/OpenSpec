@@ -213,6 +213,49 @@ Extract + trace together turn OpenSpec from a greenfield development methodology
 
 ---
 
+## Trace as Independent Command
+
+### Why Trace Needs Independence
+
+Trace was initially considered as a capability embedded in extract and archive. Further exploration identified cases where standalone trace is necessary:
+
+1. **"We weren't tracing before."** Specs and code exist from the normal change workflow, but no traces. Need to establish traceability without extracting or archiving.
+2. **"Drift happened."** Code changed outside the OpenSpec workflow (hotfixes, ad-hoc refactors). Traces are stale and need reconciliation against reality.
+3. **"We turned tracing on."** Project adopts traceability mid-life. Existing specs, existing code, no traces. Trace bootstraps the mapping.
+
+None of these cases are extract (specs already exist) or archive (no change in flight). They require mapping code against specs as a standalone operation.
+
+### Trace in the Normal Workflow
+
+Traces also have value in the day-to-day proposal workflow, not just migrations:
+
+- **Archive with traces:** When trace artifacts exist in a project, archive can run trace as a completeness gate — "your change is done, but these lines aren't covered by any spec from this change."
+- **Verify with traces:** Verify can check existing traces during development — "am I on track?"
+- **Both are opt-in:** If trace files don't exist, these commands work exactly as today.
+
+### Revised Command Surface
+
+```
+extract       code ──────────────▶ specs (in extracts/)
+                                   may also produce traces
+
+trace         code + specs ──────▶ trace maps (durable artifact)
+                                   standalone, re-runnable
+                                   works with both extracts/ and specs/
+
+archive       change ────────────▶ specs promoted, change closed
+                                   may run trace as a gate/step
+
+trace-report  trace maps ────────▶ human-readable summary
+(or trace --report, or separate utility — TBD)
+```
+
+### Durable Artifacts vs. Reports
+
+Trace always produces a **durable artifact** (the YAML trace map). A trace-report is a separate read-only utility that summarizes existing trace maps for humans. Whether trace-report is a flag on trace, a subcommand, or a separate utility is an open design question.
+
+---
+
 ## Open Design Questions (Remaining)
 
 1. **Qualifying lines** — What counts? Import statements, type definitions, test files, config?
@@ -222,3 +265,5 @@ Extract + trace together turn OpenSpec from a greenfield development methodology
 5. **Classification location** — Inline in spec.md vs. separate disposition.yaml?
 6. **Extract idempotency** — How does re-running extract interact with existing extracts?
 7. **Promotion workflow** — What does "carry forward an extract into specs/" look like as a process?
+8. **Trace-report format** — Separate utility, subcommand, or flag on trace?
+9. **Archive + trace interaction** — How does archive behave when traces exist? Warning only, or blocking gate?
